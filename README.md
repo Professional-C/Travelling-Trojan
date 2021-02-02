@@ -1,10 +1,10 @@
 # ITP 435 PA2 #
 
 ### EDIT BELOW ###
-Name: Tommy Trojan
+Name: Sydney Nguyen
 
-Email: ttrojan@usc.edu
+Email: sydneykn@usc.edu
 
-Section: [M/W or T/TH]
+Section: M/W
 
-Platform: [PC/MAC]
+Platform: MAC
