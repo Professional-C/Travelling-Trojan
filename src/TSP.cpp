@@ -7,7 +7,8 @@
 #include <iostream>
 
 
-double computeHaversine(double lat1, double lat2, double lon1, double lon2){
+double computeHaversine(double lat1, double lat2, double lon1, double lon2)
+{
     double dlon = lon2-lon1;
     double dlat = lat2-lat1;
     double a = (sin(dlat/2.0)*sin(dlat/2.0)) + (cos(lat1) * cos(lat2) * sin(dlon/2.0)*sin(dlon/2.0));
@@ -16,7 +17,8 @@ double computeHaversine(double lat1, double lat2, double lon1, double lon2){
     return distance;
 }
 
-std::vector<std::pair<int,double>> computeFitness(Population population, std::vector<Location> locations) {
+std::vector<std::pair<int,double>> computeFitness(Population population, std::vector<Location> locations)
+{
     
     std::vector<std::pair<int,double>> fitnesses;
     for(int i = 0; i < population.mMembers.size(); i++){
@@ -43,11 +45,26 @@ std::vector<std::pair<int,double>> computeFitness(Population population, std::ve
     return fitnesses;
 }
 
-bool compareFit(std::pair<int,double> pair1, std::pair<int,double> pair2){
+bool compareFit(std::pair<int,double> pair1, std::pair<int,double> pair2)
+{
     return pair1.second < pair2.second;
 }
 
-std::pair<int,int> chooseParents(std::mt19937& rand, std::vector<double> probs){
+std::vector<double> buildProbVector(std::vector<std::pair<int,double>> fitnesses)
+{
+    
+    std::vector<double> probs(fitnesses.size());
+    std::fill(probs.begin(),probs.end(),1.0/fitnesses.size());
+    probs.at(fitnesses.at(0).first) *= 6.0;
+    probs.at(fitnesses.at(1).first) *= 6.0;
+    for(int i = 2; i <= (fitnesses.size()/2) -1; i++){
+        probs.at(fitnesses.at(i).first) *= 3.0;
+    }
+    return probs;
+}
+
+std::pair<int,int> chooseParents(std::mt19937& rand, std::vector<double> probs)
+{
     std::uniform_real_distribution<double> dist(0.0,1.0);
     double p1 = dist(rand);
     int index1 = 0;
@@ -74,21 +91,16 @@ std::pair<int,int> chooseParents(std::mt19937& rand, std::vector<double> probs){
 }
 
 
-std::vector<std::pair<int,int>> selection(std::vector<std::pair<int,double>> fitnesses, std::mt19937& rand){
-    
+std::vector<std::pair<int,int>> selection(std::vector<std::pair<int,double>> fitnesses, std::mt19937& rand)
+{
     
     //Sort fitnesses by best fit (low to high)
     std::sort(fitnesses.begin(),fitnesses.end(),compareFit);
     int size = fitnesses.size();
     
     // Setup probability vector
-    std::vector<double> probs(fitnesses.size());
-    std::fill(probs.begin(),probs.end(),1.0/size);
-    probs.at(fitnesses.at(0).first) *= 6.0;
-    probs.at(fitnesses.at(1).first) *= 6.0;
-    for(int i = 2; i <= (fitnesses.size()/2) -1; i++){
-        probs.at(fitnesses.at(i).first) *= 3.0;
-    }
+    std::vector<double> probs = buildProbVector(fitnesses);
+   
    
     // Re-normalize probability vector
     double sum = accumulate(probs.begin(),probs.end(), 0.0);
@@ -104,30 +116,34 @@ std::vector<std::pair<int,int>> selection(std::vector<std::pair<int,double>> fit
     return selections;
 }
 
+std::vector<int> performCross(std::vector<std::vector<int>> mMembers, int first, int second, int crossIndex){
+    std::vector<int> child(mMembers.at(first).size());
+    std::copy_n(mMembers.at(first).begin(), crossIndex+1, child.begin());
+    std::copy_if(mMembers.at(second).begin(), mMembers.at(second).end(), child.begin()+crossIndex+1, [child](int i){return find(child.begin(),child.end(),i) == child.end();});
+    return child;
+}
+
 Population crossover(std::vector<std::pair<int,int>> pairs, std::vector<std::vector<int>> mMembers, std::mt19937& rand, double mutationChance){
     Population newPop;
     
     for(int i = 0; i < pairs.size(); i++){
+        
+        // Determine crossover index and which parent goes first
         std::pair<int,int> currPair = pairs.at(i);
         std::uniform_int_distribution<int> dist1(1, mMembers.at(0).size()-2);
         int crossIndex = dist1(rand);
         std::uniform_int_distribution<int> dist2(0,1);
         int goesFirst = dist2(rand);
         
-        
+        // Perform Crossover
         std::vector<int> child(mMembers.at(currPair.first).size());
         if(goesFirst == 1){
-            std::copy_n(mMembers.at(currPair.first).begin(), crossIndex+1, child.begin());
-            std::copy_if(mMembers.at(currPair.second).begin(), mMembers.at(currPair.second).end(), child.begin()+crossIndex+1, [child](int i){return find(child.begin(),child.end(),i) == child.end();});
+            child = performCross(mMembers,currPair.first,currPair.second,crossIndex);
         }
         else{
-            std::copy_n(mMembers.at(currPair.second).begin(), crossIndex+1, child.begin());
-            std::copy_if(mMembers.at(currPair.first).begin(), mMembers.at(currPair.first).end(), child.begin()+crossIndex+1, [child](int i){return find(child.begin(),child.end(),i) == child.end();});
+            child = performCross(mMembers,currPair.second,currPair.first,crossIndex);
         }
-//        for(int i = 0; i < child.size(); i++){
-//            std::cout << child.at(i) << std:: endl;
-//        }
-//
+
         // Determine mutation
         std::uniform_real_distribution<double> dist3(0.0,1.0);
         double mutate = dist3(rand);

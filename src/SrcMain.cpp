@@ -14,7 +14,8 @@ std::vector<Location> readLocations(std::string input){
     while(std::getline(inputFile,line)){
         std::istringstream tokenizer(line);
         Location loc;
-        std::string lat, lon;
+        std::string lat;
+        std::string lon;
         std::getline(tokenizer, loc.mName, ',');
         std::getline(tokenizer, lat, ',');
         std::getline(tokenizer, lon, ',');
