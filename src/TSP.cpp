@@ -47,9 +47,35 @@ bool compareFit(std::pair<int,double> pair1, std::pair<int,double> pair2){
     return pair1.second < pair2.second;
 }
 
+std::pair<int,int> chooseParents(std::mt19937& rand, std::vector<double> probs){
+    std::uniform_real_distribution<double> dist(0.0,1.0);
+    double p1 = dist(rand);
+    int index1 = 0;
+    double counter = 0;
+    for(int i = 0; i < probs.size(); i++){
+        counter += probs.at(i);
+        if(counter > p1){
+            index1 = i;
+            break;
+        }
+    }
+    double p2 = dist(rand);
+    counter = 0;
+    int index2 = 0;
+    for(int i = 0; i < probs.size(); i++){
+        counter += probs.at(i);
+        if(counter >= p2){
+            index2 = i;
+            break;
+        }
+    }
+    std::pair<int,int> selectedPair(index1,index2);
+    return selectedPair;
+}
+
+
 std::vector<std::pair<int,int>> selection(std::vector<std::pair<int,double>> fitnesses, std::mt19937& rand){
     
-    std::vector<std::pair<int,int>> selections;
     
     //Sort fitnesses by best fit (low to high)
     std::sort(fitnesses.begin(),fitnesses.end(),compareFit);
@@ -70,47 +96,27 @@ std::vector<std::pair<int,int>> selection(std::vector<std::pair<int,double>> fit
     
    
     // Choose random parents
+    std::vector<std::pair<int,int>> selections;
     for( int i = 0; i < size; i++){
-        std::uniform_real_distribution<double> dist(0.0,1.0);
-        double p1 = dist(rand);
-        int index1 = 0;
-        double counter = 0;
-        for(int i = 0; i < probs.size(); i++){
-            counter += probs.at(i);
-            if(counter > p1){
-                index1 = i;
-                break;
-            }
-        }
-        double p2 = dist(rand);
-        counter = 0;
-        int index2 = 0;
-        for(int i = 0; i < probs.size(); i++){
-            counter += probs.at(i);
-            if(counter >= p2){
-                index2 = i;
-                break;
-            }
-        }
-        std::pair<int,int> selectedPair(index1,index2);
-        selections.push_back(selectedPair);
+        selections.push_back(chooseParents(rand,probs));
     }
-    
+
     return selections;
 }
 
-Population crossover(std::vector<std::pair<int,int>> pairs, std::vector<std::vector<int>> mMembers, std::mt19937& rand){
+Population crossover(std::vector<std::pair<int,int>> pairs, std::vector<std::vector<int>> mMembers, std::mt19937& rand, double mutationChance){
     Population newPop;
+    
     for(int i = 0; i < pairs.size(); i++){
         std::pair<int,int> currPair = pairs.at(i);
-        std::uniform_int_distribution<int> dist1(1, mMembers.at(i).size()-2);
+        std::uniform_int_distribution<int> dist1(1, mMembers.at(0).size()-2);
         int crossIndex = dist1(rand);
         std::uniform_int_distribution<int> dist2(0,1);
         int goesFirst = dist2(rand);
         
-        std::cout << "index: " << crossIndex << " pair " << currPair.first << currPair.second << std::endl;
+        
         std::vector<int> child(mMembers.at(currPair.first).size());
-        if(goesFirst == 0){
+        if(goesFirst == 1){
             std::copy_n(mMembers.at(currPair.first).begin(), crossIndex+1, child.begin());
             std::copy_if(mMembers.at(currPair.second).begin(), mMembers.at(currPair.second).end(), child.begin()+crossIndex+1, [child](int i){return find(child.begin(),child.end(),i) == child.end();});
         }
@@ -121,8 +127,18 @@ Population crossover(std::vector<std::pair<int,int>> pairs, std::vector<std::vec
 //        for(int i = 0; i < child.size(); i++){
 //            std::cout << child.at(i) << std:: endl;
 //        }
+//
+        // Determine mutation
+        std::uniform_real_distribution<double> dist3(0.0,1.0);
+        double mutate = dist3(rand);
         
-        //std::uniform_real_distribution<double>
+        if(mutate <= mutationChance){ //mutate
+            std::uniform_int_distribution<int> dist4(1,child.size()-1);
+            int index1 = dist4(rand);
+            int index2 = dist4(rand);
+            std::swap(child.at(index1),child.at(index2));
+        }
+        newPop.mMembers.push_back(child);
     }
     return newPop;
 }

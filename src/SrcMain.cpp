@@ -44,7 +44,7 @@ void ProcessCommandArgs(int argc, const char* argv[])
     std::string input = argv[1];
     int pop = atoi(argv[2]);
     int generations = atoi(argv[3]);
-    int mutation = atoi(argv[4]);
+    double mutation = atoi(argv[4]);
     long seed = atol(argv[5]);
     
     // Random number generator constructor
@@ -66,7 +66,33 @@ void ProcessCommandArgs(int argc, const char* argv[])
         }
         output << std::endl;
     }
-  
+    
+    for(int i = 0; i < generations; i++){
+        std::vector<std::pair<int,double>> fitness = computeFitness(population, locations);
+        
+        output << "FITNESS:" << std::endl;
+        for(int i = 0; i < fitness.size(); i++){
+            output << fitness.at(i).first << ":" << fitness.at(i).second << std::endl;
+        }
+        
+        std::vector<std::pair<int,int>> selectionPairs = selection(fitness, randGen);
+        output << "SELECTED PAIRS:" << std::endl;
+        for(int i = 0; i < selectionPairs.size(); i++){
+            output << "(" << selectionPairs.at(i).first << "," << selectionPairs.at(i).second << ")" << std::endl;
+        }
+        
+        population = crossover(selectionPairs, population.mMembers, randGen, mutation/100.0);
+        output << "GENERATION: " << i+1 << std::endl;
+        for(auto it = std::begin(population.mMembers); it != std::end(population.mMembers); it++){
+            for(auto it2 = std::begin(*it); it2 != std::end(*it); it2++){
+                output << *it2;
+                if(it2 != std::end(*it)-1){
+                    output << ",";
+                }
+            }
+            output << std::endl;
+        }
+    }
     std::vector<std::pair<int,double>> fitness = computeFitness(population, locations);
     
     output << "FITNESS:" << std::endl;
@@ -74,13 +100,13 @@ void ProcessCommandArgs(int argc, const char* argv[])
         output << fitness.at(i).first << ":" << fitness.at(i).second << std::endl;
     }
     
-    std::vector<std::pair<int,int>> selectionPairs = selection(fitness, randGen);
-    output << "SELECTED PAIRS:" << std::endl;
-    for(int i = 0; i < selectionPairs.size(); i++){
-        output << "(" << selectionPairs.at(i).first << "," << selectionPairs.at(i).second << ")" << std::endl;
+    std::sort(fitness.begin(),fitness.end(),compareFit);
+    output << "SOLUTION: " << std::endl;
+    for(int i = 0; i < locations.size(); i++){
+        output << locations.at(population.mMembers.at(fitness.at(0).first).at(i)).mName << std::endl;
     }
-    
-    crossover(selectionPairs, population.mMembers, randGen);
+    output << locations.at(population.mMembers.at(fitness.at(0).first).at(0)).mName << std::endl;
+    output << "DISTANCE: " << fitness.at(0).second << " miles" << std::endl;
     
     output.close();
     
